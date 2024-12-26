@@ -100,15 +100,15 @@ extension UIImage {
             // Calculate the scaling factor for scaleAspectFill
             let aspectWidth = targetSize.width / size.width
             let aspectHeight = targetSize.height / size.height
-            let aspectRatio = max(aspectWidth, aspectHeight) // Use max for aspect fill
+            let aspectRatio = min(aspectWidth, aspectHeight) // Use max for aspect fill
             
             let scaledSize = CGSize(width: size.width * aspectRatio, height: size.height * aspectRatio)
             let renderer = UIGraphicsImageRenderer(size: targetSize, format: format)
             
             return renderer.image { context in
                 let cropOrigin = CGPoint(
-                    x: (scaledSize.width - targetSize.width) / 2,
-                    y: (scaledSize.height - targetSize.height) / 2
+                    x: (targetSize.width - scaledSize.width) / 2,
+                    y: (targetSize.height - scaledSize.height) / 2
                 )
                 
                 let rect = CGRect(origin: cropOrigin, size: scaledSize)
