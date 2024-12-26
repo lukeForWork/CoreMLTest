@@ -18,6 +18,7 @@
 		A3A0DC2A2D1540F100E0FBC0 /* MediaPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3A0DC292D1540F100E0FBC0 /* MediaPicker.swift */; };
 		A3A0DC2C2D15466000E0FBC0 /* UIViewController+Extension.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3A0DC2B2D15466000E0FBC0 /* UIViewController+Extension.swift */; };
 		A3A0DC312D15650600E0FBC0 /* obj_dev_v1.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = A3A0DC302D15650600E0FBC0 /* obj_dev_v1.mlpackage */; };
+		A3F11AD72D1CE7C300B3EEBA /* ImagePickerCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3F11AD62D1CE7BB00B3EEBA /* ImagePickerCell.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +35,7 @@
 		A3A0DC292D1540F100E0FBC0 /* MediaPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPicker.swift; sourceTree = "<group>"; };
 		A3A0DC2B2D15466000E0FBC0 /* UIViewController+Extension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIViewController+Extension.swift"; sourceTree = "<group>"; };
 		A3A0DC302D15650600E0FBC0 /* obj_dev_v1.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = obj_dev_v1.mlpackage; sourceTree = "<group>"; };
+		A3F11AD62D1CE7BB00B3EEBA /* ImagePickerCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePickerCell.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -71,6 +73,7 @@
 				A3A0DC302D15650600E0FBC0 /* obj_dev_v1.mlpackage */,
 				A3A0DC222D15176D00E0FBC0 /* obj_det_v2.mlpackage */,
 				A3A0DC122D15175C00E0FBC0 /* ViewController.swift */,
+				A3F11AD62D1CE7BB00B3EEBA /* ImagePickerCell.swift */,
 				A3A0DC292D1540F100E0FBC0 /* MediaPicker.swift */,
 				A3A0DC262D153F9600E0FBC0 /* extensions */,
 				A3A0DC142D15175C00E0FBC0 /* Main.storyboard */,
@@ -167,6 +170,7 @@
 				A3A0DC0F2D15175C00E0FBC0 /* AppDelegate.swift in Sources */,
 				A3A0DC2C2D15466000E0FBC0 /* UIViewController+Extension.swift in Sources */,
 				A3A0DC2A2D1540F100E0FBC0 /* MediaPicker.swift in Sources */,
+				A3F11AD72D1CE7C300B3EEBA /* ImagePickerCell.swift in Sources */,
 				A3A0DC312D15650600E0FBC0 /* obj_dev_v1.mlpackage in Sources */,
 				A3A0DC112D15175C00E0FBC0 /* SceneDelegate.swift in Sources */,
 			);
