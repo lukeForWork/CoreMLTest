@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import CoreMedia
 
 extension UIImage {
     
@@ -65,6 +66,34 @@ extension UIImage {
         CVPixelBufferUnlockBaseAddress(buffer, .readOnly)
         
         return buffer
+    }
+    
+    var cmSampleBuffer: CMSampleBuffer? { toCmSampleBuffer() }
+    
+    func toCmSampleBuffer(size: CGSize? = nil) -> CMSampleBuffer? {
+        guard let pixelBuffer = toCVPixelBuffer(size: size) else { return nil }
+        var sampleBuffer: CMSampleBuffer?
+        var timingInfo = CMSampleTimingInfo(duration: CMTimeMake(value: 1, timescale: 30),  // 30 fps
+                                            presentationTimeStamp: CMTime.zero,
+                                            decodeTimeStamp: CMTime.invalid)
+        
+        var videoInfo: CMVideoFormatDescription?
+        let status = CMVideoFormatDescriptionCreateForImageBuffer(allocator: kCFAllocatorDefault,
+                                                                  imageBuffer: pixelBuffer,
+                                                                  formatDescriptionOut: &videoInfo)
+        
+        if status == kCVReturnSuccess, let videoInfo = videoInfo {
+            CMSampleBufferCreateForImageBuffer(allocator: kCFAllocatorDefault,
+                                               imageBuffer: pixelBuffer,
+                                               dataReady: true,
+                                               makeDataReadyCallback: nil,
+                                               refcon: nil,
+                                               formatDescription: videoInfo,
+                                               sampleTiming: &timingInfo,
+                                               sampleBufferOut: &sampleBuffer)
+        }
+        
+        return sampleBuffer
     }
     
     var normalized: UIImage? {

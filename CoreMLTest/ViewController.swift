@@ -8,14 +8,13 @@
 import UIKit
 import CoreML
 
-enum DetectionError: Error {
-    case loadDetectorError
-    case typeCastingError
-}
-
 class ViewController: UIViewController {
     
     private let objDetector = try? obj_det_v2()
+    
+    private var detector = ObjectDetector()
+    
+    private var vectorModlel = ObjectVectorModel()
     
     private var images: [UIImage?] = []
     
@@ -108,16 +107,10 @@ class ViewController: UIViewController {
         )
     }
     
-    private func predict(_ image: UIImage) throws -> obj_det_v2Output {
-        guard let objDetector = objDetector else {
-            throw DetectionError.loadDetectorError
+    private func detectObjects(in image: UIImage, handler: @escaping ([UIImage]) -> Void) throws {
+        try detector.detectObjects(in: image) { imgs in
+            handler(imgs)
         }
-        
-        guard let imageBuffer = image.cvPixelBuffer else {
-            throw DetectionError.typeCastingError
-        }
-        
-        return try objDetector.prediction(image: imageBuffer, iouThreshold: 0.5, confidenceThreshold: 0.6)
     }
 }
 
@@ -128,27 +121,25 @@ extension ViewController: MediaPickerDelegate {
             imagePickerCollectionView.reloadData()
         }
         
-        for result in results {
-            
-            switch result {
-            case .success(let obj):
-                guard let image = UIImage(data: obj.data) else { continue }
-                do {
-                    imageView.image = image
-                    images.append(image)
-                    let prediction = try predict(image)
-                    print("prediction.featureNames", prediction.featureNames)
-                    print("prediction.confidence", prediction.confidence)
-                    print("prediction.coordinates", prediction.coordinates)
-                    //TODO: crop image and add into images array
-                    
-                } catch {
-                    print(error)
+        guard let result = results.first else { return } // only support single image
+        
+        
+        switch result {
+        case .success(let obj):
+            guard let image = UIImage(data: obj.data) else { break }
+            do {
+                imageView.image = image
+                images.append(image)
+                try detectObjects(in: image) { [weak self] imgs in
+                    self?.images.append(contentsOf: imgs)
                 }
                 
-            case .failure(let error):
+            } catch {
                 print(error)
             }
+            
+        case .failure(let error):
+            print(error)
         }
     }
     
@@ -161,6 +152,15 @@ extension ViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         let image = images[indexPath.item]
         imageView.image = image
+        
+        if let buffer = image?.cvPixelBuffer {
+            do {
+                let result = try vectorModlel.process(imageBuffer: buffer)
+                print(result)
+            } catch {
+                print("failed to process image buffer:", error)
+            }
+        }
     }
 }
 
