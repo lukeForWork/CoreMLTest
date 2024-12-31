@@ -13,6 +13,12 @@ enum DetectionError: Error {
     case typeCastingError
 }
 
+struct DetectionResult {
+    let image: UIImage
+    let identifier: String
+    let confidence: VNConfidence
+}
+
 class ObjectDetector {
     private var detector: VNCoreMLModel = {
         do {
@@ -23,7 +29,7 @@ class ObjectDetector {
         }
     }()
     
-    func detectObjects(in image: UIImage, completion: ([UIImage]) -> Void) throws {
+    func detectObjects(in image: UIImage, completion: @escaping ([DetectionResult]) -> Void) throws {
         guard let sampleBuffer = image.cmSampleBuffer else {
             throw DetectionError.typeCastingError
         }
@@ -32,11 +38,11 @@ class ObjectDetector {
         let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer,
                                             orientation: imageOrientation,
                                             options: [:])
-        let request = getVisionRequest(completion)
+        let request = getVisionRequest(image: image, handler: completion)
         try handler.perform([request])
     }
     
-    private func getVisionRequest(_ handler: ([UIImage]) -> Void) -> VNCoreMLRequest {
+    private func getVisionRequest(image: UIImage, handler: @escaping ([DetectionResult]) -> Void) -> VNCoreMLRequest {
         let request = VNCoreMLRequest(model: detector) { [weak self] request, error in
             
             if let error = error {
@@ -49,50 +55,41 @@ class ObjectDetector {
                 return
             }
             
-            self?.process(observations: observations)
-            
+            if let processedData = self?.process(observations: observations) {
+                DispatchQueue.main.async {
+                    let detectionResult: [DetectionResult] = processedData.compactMap { data in
+                        guard let croppedImage = image.crop(to: data.rect) else { return nil }
+                        return DetectionResult(image: croppedImage, identifier: data.identifier, confidence: data.confidence)
+                    }
+                    handler(detectionResult)
+                }
+            }
         }
         request.imageCropAndScaleOption = .scaleFill  // .scaleFit, .scaleFill, .centerCrop
         return request
     }
     
-    private func process(observations: [VNRecognizedObjectObservation]) {
-        var str = ""
+    private func process(observations: [VNRecognizedObjectObservation]) -> [(rect: CGRect, identifier: String, confidence: VNConfidence)] {
         
-//        let width = videoPreview.bounds.width  // 375 pix
-//        let height = videoPreview.bounds.height  // 812 pix
-        
-        if UIDevice.current.orientation == .portrait {
+        var results = [(rect: CGRect, identifier: String, confidence: VNConfidence)]()
+        for prediction in observations {
+            var rect = prediction.boundingBox  // normalized xywh, origin lower left
+            switch UIDevice.current.orientation {
+            case .portraitUpsideDown:
+                rect = CGRect(x: 1.0 - rect.origin.x - rect.width,
+                              y: 1.0 - rect.origin.y - rect.height,
+                              width: rect.width,
+                              height: rect.height)
+            case .unknown:
+                print("The device orientation is unknown, the predictions may be affected")
+                fallthrough
+            default: break
+            }
             
-            for i in 0..<observations.count {
-                    let prediction = observations[i]
-                    
-                    var rect = prediction.boundingBox  // normalized xywh, origin lower left
-                    switch UIDevice.current.orientation {
-                    case .portraitUpsideDown:
-                        rect = CGRect(
-                            x: 1.0 - rect.origin.x - rect.width,
-                            y: 1.0 - rect.origin.y - rect.height,
-                            width: rect.width,
-                            height: rect.height)
-                    case .landscapeLeft:
-                        rect = CGRect(
-                            x: rect.origin.x,
-                            y: rect.origin.y,
-                            width: rect.width,
-                            height: rect.height)
-                    case .landscapeRight:
-                        rect = CGRect(
-                            x: rect.origin.x,
-                            y: rect.origin.y,
-                            width: rect.width,
-                            height: rect.height)
-                    case .unknown:
-                        print("The device orientation is unknown, the predictions may be affected")
-                        fallthrough
-                    default: break
-                    }
-                    
+            results.append((rect: rect,
+                            identifier: prediction.labels[0].identifier,
+                            confidence: prediction.labels[0].confidence))
+        }
 //                    if ratio >= 1 {  // iPhone ratio = 1.218
 //                        let offset = (1 - ratio) * (0.5 - rect.minX)
 //                        let transform = CGAffineTransform(scaleX: 1, y: -1).translatedBy(x: offset, y: -1)
@@ -193,13 +190,14 @@ class ObjectDetector {
 //                    sec_day, freeSpace(), memoryUsage(), UIDevice.current.batteryLevel,
 //                    self.t1 * 1000, self.t2 * 1000, 1 / self.t4)
 //                saveText(text: str, file: "frames.txt")  // Write stats for each image
-            }
-        }
+//            }
+//        }
         
         // Debug
         // print(str)
         // print(UIDevice.current.identifierForVendor!)
         // saveImage()
+        return results
     }
 
 }

@@ -125,11 +125,11 @@ extension UIImage {
                 draw(in: CGRect(origin: .zero, size: scaledSize))
             }
             
-        case .scaleToFill(let targetSize):
+        case .scaleToFit(let targetSize):
             // Calculate the scaling factor for scaleAspectFill
             let aspectWidth = targetSize.width / size.width
             let aspectHeight = targetSize.height / size.height
-            let aspectRatio = min(aspectWidth, aspectHeight) // Use max for aspect fill
+            let aspectRatio = min(aspectWidth, aspectHeight) // Use min for scaleAspectFit
             
             let scaledSize = CGSize(width: size.width * aspectRatio, height: size.height * aspectRatio)
             let renderer = UIGraphicsImageRenderer(size: targetSize, format: format)
@@ -145,20 +145,23 @@ extension UIImage {
                 draw(in: rect)
             }
         }
-        
+    }
+    
+    func crop(to rect: CGRect) -> UIImage? {
+        cgImage?.cropping(to: rect).map { UIImage(cgImage: $0) }
     }
 }
 
 enum TargetImageSize {
     /// crop image to exact size, scale up if the image is smaller
-    case scaleToFill(CGSize)
+    case scaleToFit(CGSize)
     
     /// image, with fixed aspect ratio, scale down to fit in this CGSize if the source is larger.
     case max(CGSize)
     
     var size: CGSize {
         switch self {
-        case .scaleToFill(let size):
+        case .scaleToFit(let size):
             return size
         case .max(let size):
             return size

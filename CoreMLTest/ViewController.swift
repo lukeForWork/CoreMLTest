@@ -16,12 +16,31 @@ class ViewController: UIViewController {
     
     private var vectorModlel = ObjectVectorModel()
     
-    private var images: [UIImage?] = []
+    private var pageData: [DetectionResult] = [] {
+        didSet {
+            imagePickerCollectionView.reloadData()
+        }
+    }
+    
+    private var selectedImageIndex: Int? {
+        didSet {
+            guard
+                let selectedImageIndex = selectedImageIndex,
+                oldValue != selectedImageIndex,
+                selectedImageIndex < pageData.count
+            else {
+                imageView.image = nil
+                textDisplay.text = "Error"
+                return
+            }
+            didSelectItem(pageData[selectedImageIndex])
+        }
+    }
     
     private lazy var impageInputButton: MediaPicker = {
         let picker = MediaPicker()
         picker.selectionLimit = 1
-        picker.imageSize = .scaleToFill(CGSize(width: 384, height: 640))
+        picker.imageSize = .scaleToFit(CGSize(width: 384, height: 640))
         picker.delegate = self
         return picker
     }()
@@ -34,6 +53,17 @@ class ViewController: UIViewController {
     }()
     
     private let imagePickerHeight: CGFloat = 50
+    
+    private let textDisplay: UILabel = {
+        let lbl = UILabel()
+        lbl.font = .systemFont(ofSize: 18)
+        lbl.textColor = .white
+        lbl.translatesAutoresizingMaskIntoConstraints = false
+        lbl.numberOfLines = 1
+        lbl.lineBreakMode = .byTruncatingMiddle
+        lbl.textAlignment = .center
+        return lbl
+    }()
     
     private lazy var imagePickerCollectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
@@ -73,6 +103,12 @@ class ViewController: UIViewController {
         
         view.addSubview(imageView)
         
+        let textContainer = UIView()
+        textContainer.addSubview(textDisplay)
+        textContainer.translatesAutoresizingMaskIntoConstraints = false
+        textContainer.backgroundColor = .black.withAlphaComponent(0.5)
+        view.addSubview(textContainer)
+        
         let imagePickerContainer = UIView()
         imagePickerContainer.translatesAutoresizingMaskIntoConstraints = false
         imagePickerContainer.backgroundColor = .lightGray
@@ -93,7 +129,16 @@ class ViewController: UIViewController {
             imageView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
             imageView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
             imageView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            imageView.bottomAnchor.constraint(equalTo: imagePickerContainer.topAnchor)
+            imageView.bottomAnchor.constraint(equalTo: imagePickerContainer.topAnchor),
+            
+            textContainer.leadingAnchor.constraint(equalTo: imageView.leadingAnchor),
+            textContainer.trailingAnchor.constraint(equalTo: imageView.trailingAnchor),
+            textContainer.bottomAnchor.constraint(equalTo: imageView.bottomAnchor),
+            textContainer.heightAnchor.constraint(equalToConstant: 48),
+            
+            textDisplay.leadingAnchor.constraint(equalTo: textContainer.leadingAnchor, constant: 16),
+            textDisplay.trailingAnchor.constraint(equalTo: textContainer.trailingAnchor, constant: -16),
+            textDisplay.centerYAnchor.constraint(equalTo: textContainer.centerYAnchor)
         ])
     }
     
@@ -107,31 +152,41 @@ class ViewController: UIViewController {
         )
     }
     
-    private func detectObjects(in image: UIImage, handler: @escaping ([UIImage]) -> Void) throws {
-        try detector.detectObjects(in: image) { imgs in
-            handler(imgs)
+    private func didSelectItem(_ item: DetectionResult) {
+        imageView.image = item.image
+        textDisplay.text = item.identifier + "  " + "\(item.confidence * 100)"
+        
+        if selectedImageIndex != 0 {
+            DispatchQueue.global().async {
+                do {
+                    let result = try self.vectorModlel.process(image: item.image)
+                    print(result.description)
+                } catch {
+                    print("failed to process image buffer:", error)
+                }
+            }
+            textDisplay.text = item.identifier + "  " + "\(item.confidence * 100)"
+        } else {
+            textDisplay.text = "Original Image"
         }
     }
 }
 
 extension ViewController: MediaPickerDelegate {
     func picker(_ picker: MediaPicker, didFinishPicking results: [PickedMediaResult]) {
-        images.removeAll()
-        defer {
-            imagePickerCollectionView.reloadData()
-        }
-        
         guard let result = results.first else { return } // only support single image
-        
+        pageData.removeAll()
+        selectedImageIndex = nil
         
         switch result {
         case .success(let obj):
             guard let image = UIImage(data: obj.data) else { break }
             do {
-                imageView.image = image
-                images.append(image)
-                try detectObjects(in: image) { [weak self] imgs in
-                    self?.images.append(contentsOf: imgs)
+                pageData.append(DetectionResult(image: image, identifier: "", confidence: 0))
+                selectedImageIndex = 0
+
+                try detector.detectObjects(in: image) { [weak self] detectionResults in
+                    self?.pageData.append(contentsOf: detectionResults)
                 }
                 
             } catch {
@@ -150,29 +205,19 @@ extension ViewController: MediaPickerDelegate {
 
 extension ViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        let image = images[indexPath.item]
-        imageView.image = image
-        
-        if let buffer = image?.cvPixelBuffer {
-            do {
-                let result = try vectorModlel.process(imageBuffer: buffer)
-                print(result)
-            } catch {
-                print("failed to process image buffer:", error)
-            }
-        }
+        selectedImageIndex = indexPath.item
     }
 }
 
 extension ViewController: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return images.count
+        return pageData.count
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "\(ImagePickerCell.self)", for: indexPath) as! ImagePickerCell
-        let image = images[indexPath.item]
-        cell.imageView.image = image
+        let item = pageData[indexPath.item]
+        cell.imageView.image = item.image
         return cell
     }
 }

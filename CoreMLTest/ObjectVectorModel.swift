@@ -8,6 +8,10 @@
 import UIKit
 import CoreML
 
+enum EmbeddingModelError: Error {
+    case typeCastingError
+}
+
 class ObjectVectorModel {
     let embModel: emb_model = {
         do {
@@ -17,7 +21,11 @@ class ObjectVectorModel {
         }
     }()
     
-    func process(imageBuffer: CVPixelBuffer) throws -> MLMultiArray {
+    func process(image: UIImage) throws -> MLMultiArray {
+        guard let imageBuffer = image.toCVPixelBuffer(size: CGSize(width: 224, height: 224)) else {
+            throw EmbeddingModelError.typeCastingError
+        }
+        
         return try embModel.prediction(x: imageBuffer).var_1262
     }
 }
