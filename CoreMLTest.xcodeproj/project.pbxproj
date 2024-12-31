@@ -55,6 +55,16 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		A35A8CDD2D23DD5F00D2F42D /* mlPackages */ = {
+			isa = PBXGroup;
+			children = (
+				A3A0DC302D15650600E0FBC0 /* obj_dev_v1.mlpackage */,
+				A3A0DC222D15176D00E0FBC0 /* obj_det_v2.mlpackage */,
+				A3F11AD02D1AB10000B3EEBA /* emb_model.mlpackage */,
+			);
+			path = mlPackages;
+			sourceTree = "<group>";
+		};
 		A3A0DC022D15175C00E0FBC0 = {
 			isa = PBXGroup;
 			children = (
@@ -76,9 +86,7 @@
 			children = (
 				A3A0DC0E2D15175C00E0FBC0 /* AppDelegate.swift */,
 				A3A0DC102D15175C00E0FBC0 /* SceneDelegate.swift */,
-				A3A0DC302D15650600E0FBC0 /* obj_dev_v1.mlpackage */,
-				A3A0DC222D15176D00E0FBC0 /* obj_det_v2.mlpackage */,
-				A3F11AD02D1AB10000B3EEBA /* emb_model.mlpackage */,
+				A35A8CDD2D23DD5F00D2F42D /* mlPackages */,
 				A3A0DC122D15175C00E0FBC0 /* ViewController.swift */,
 				A3F11AD62D1CE7BB00B3EEBA /* ImagePickerCell.swift */,
 				A3F11AD22D1AB7C000B3EEBA /* ObjectDetector.swift */,
