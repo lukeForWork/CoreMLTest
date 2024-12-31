@@ -10,8 +10,10 @@ import UIKit
 class ImagePickerCell: UICollectionViewCell {
     let imageView: UIImageView = {
         let iv = UIImageView()
-        iv.contentMode = .scaleAspectFill
+        iv.contentMode = .scaleAspectFit
         iv.translatesAutoresizingMaskIntoConstraints = false
+        iv.layer.borderWidth = 1
+        iv.layer.borderColor = UIColor.blue.cgColor
         return iv
     }()
     

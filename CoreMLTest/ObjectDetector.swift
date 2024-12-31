@@ -58,7 +58,14 @@ class ObjectDetector {
             if let processedData = self?.process(observations: observations) {
                 DispatchQueue.main.async {
                     let detectionResult: [DetectionResult] = processedData.compactMap { data in
-                        guard let croppedImage = image.crop(to: data.rect) else { return nil }
+                        let rect = CGRect(
+                            x: data.rect.origin.x * image.size.width,
+                            y: (1 - data.rect.origin.y - data.rect.height) * image.size.height,
+                            width: data.rect.width * image.size.width,
+                            height: data.rect.height * image.size.height
+                        )
+                        guard let croppedImage = image.crop(to: rect) else { return nil }
+                        print("Normalized Rect: \(data.rect), Pixel Rect: \(rect)")
                         return DetectionResult(image: croppedImage, identifier: data.identifier, confidence: data.confidence)
                     }
                     handler(detectionResult)
@@ -73,131 +80,54 @@ class ObjectDetector {
         
         var results = [(rect: CGRect, identifier: String, confidence: VNConfidence)]()
         for prediction in observations {
-            var rect = prediction.boundingBox  // normalized xywh, origin lower left
-            switch UIDevice.current.orientation {
-            case .portraitUpsideDown:
-                rect = CGRect(x: 1.0 - rect.origin.x - rect.width,
-                              y: 1.0 - rect.origin.y - rect.height,
-                              width: rect.width,
-                              height: rect.height)
-            case .unknown:
-                print("The device orientation is unknown, the predictions may be affected")
-                fallthrough
-            default: break
-            }
-            
+            let rect = transform(observedRect: prediction.boundingBox)
             results.append((rect: rect,
                             identifier: prediction.labels[0].identifier,
                             confidence: prediction.labels[0].confidence))
         }
-//                    if ratio >= 1 {  // iPhone ratio = 1.218
-//                        let offset = (1 - ratio) * (0.5 - rect.minX)
-//                        let transform = CGAffineTransform(scaleX: 1, y: -1).translatedBy(x: offset, y: -1)
-//                        rect = rect.applying(transform)
-//                        rect.size.width *= ratio
-//                    } else {  // iPad ratio = 0.75
-//                        let offset = (ratio - 1) * (0.5 - rect.maxY)
-//                        let transform = CGAffineTransform(scaleX: 1, y: -1).translatedBy(x: 0, y: offset - 1)
-//                        rect = rect.applying(transform)
-//                        ratio = (height / width) / (3.0 / 4.0)
-//                        rect.size.height /= ratio
-//                    }
-//                    
-//                    // Scale normalized to pixels [375, 812] [width, height]
-//                    rect = VNImageRectForNormalizedRect(rect, Int(width), Int(height))
-//                    
-//                    // The labels array is a list of VNClassificationObservation objects,
-//                    // with the highest scoring class first in the list.
-//                    let bestClass = prediction.labels[0].identifier
-//                    let confidence = prediction.labels[0].confidence
-//                    // print(confidence, rect)  // debug (confidence, xywh) with xywh origin top left (pixels)
-//                    let label = String(format: "%@ %.1f", bestClass, confidence * 100)
-//                    let alpha = CGFloat((confidence - 0.2) / (1.0 - 0.2) * 0.9)
-//                    // Show the bounding box.
-//                    boundingBoxViews[i].show(
-//                        frame: rect,
-//                        label: label,
-//                        color: colors[bestClass] ?? UIColor.white,
-//                        alpha: alpha)  // alpha 0 (transparent) to 1 (opaque) for conf threshold 0.2 to 1.0)
-//                    
-//                    if developerMode {
-//                        // Write
-//                        if save_detections {
-//                            str += String(
-//                                format: "%.3f %.3f %.3f %@ %.2f %.1f %.1f %.1f %.1f\n",
-//                                sec_day, freeSpace(), UIDevice.current.batteryLevel, bestClass, confidence,
-//                                rect.origin.x, rect.origin.y, rect.size.width, rect.size.height)
-//                        }
-//                    }
-//                } else {
-//                    boundingBoxViews[i].hide()
-//                }
-//        } else {
-//            let frameAspectRatio = longSide / shortSide
-//            let viewAspectRatio = width / height
-//            var scaleX: CGFloat = 1.0
-//            var scaleY: CGFloat = 1.0
-//            var offsetX: CGFloat = 0.0
-//            var offsetY: CGFloat = 0.0
-//            
-//            if frameAspectRatio > viewAspectRatio {
-//                scaleY = height / shortSide
-//                scaleX = scaleY
-//                offsetX = (longSide * scaleX - width) / 2
-//            } else {
-//                scaleX = width / longSide
-//                scaleY = scaleX
-//                offsetY = (shortSide * scaleY - height) / 2
-//            }
-//            
-//            for i in 0..<boundingBoxViews.count {
-//                if i < predictions.count {
-//                    let prediction = predictions[i]
-//                    
-//                    var rect = prediction.boundingBox
-//                    
-//                    rect.origin.x = rect.origin.x * longSide * scaleX - offsetX
-//                    rect.origin.y =
-//                    height
-//                    - (rect.origin.y * shortSide * scaleY - offsetY + rect.size.height * shortSide * scaleY)
-//                    rect.size.width *= longSide * scaleX
-//                    rect.size.height *= shortSide * scaleY
-//                    
-//                    let bestClass = prediction.labels[0].identifier
-//                    let confidence = prediction.labels[0].confidence
-//                    
-//                    let label = String(format: "%@ %.1f", bestClass, confidence * 100)
-//                    let alpha = CGFloat((confidence - 0.2) / (1.0 - 0.2) * 0.9)
-//                    // Show the bounding box.
-//                    boundingBoxViews[i].show(
-//                        frame: rect,
-//                        label: label,
-//                        color: colors[bestClass] ?? UIColor.white,
-//                        alpha: alpha)  // alpha 0 (transparent) to 1 (opaque) for conf threshold 0.2 to 1.0)
-//                } else {
-//                    boundingBoxViews[i].hide()
-//                }
-//            }
-//        }
-//        // Write
-//        if developerMode {
-//            if save_detections {
-//                saveText(text: str, file: "detections.txt")  // Write stats for each detection
-//            }
-//            if save_frames {
-//                str = String(
-//                    format: "%.3f %.3f %.3f %.3f %.1f %.1f %.1f\n",
-//                    sec_day, freeSpace(), memoryUsage(), UIDevice.current.batteryLevel,
-//                    self.t1 * 1000, self.t2 * 1000, 1 / self.t4)
-//                saveText(text: str, file: "frames.txt")  // Write stats for each image
-//            }
-//        }
-        
-        // Debug
-        // print(str)
-        // print(UIDevice.current.identifierForVendor!)
-        // saveImage()
         return results
     }
 
+    private func transform(observedRect: CGRect) -> CGRect {
+        var rect = observedRect
+        switch UIDevice.current.orientation {
+        case .portraitUpsideDown:
+            // Flip horizontally and vertically
+            rect = CGRect(
+                x: 1.0 - rect.origin.x - rect.width,
+                y: 1.0 - rect.origin.y - rect.height,
+                width: rect.width,
+                height: rect.height
+            )
+        case .landscapeLeft:
+            // Swap x and y, and flip horizontally
+            rect = CGRect(
+                x: rect.origin.y,
+                y: 1.0 - rect.origin.x - rect.width,
+                width: rect.height,
+                height: rect.width
+            )
+        case .landscapeRight:
+            // Swap x and y, and flip vertically
+            rect = CGRect(
+                x: 1.0 - rect.origin.y - rect.height,
+                y: rect.origin.x,
+                width: rect.height,
+                height: rect.width
+            )
+        case .portrait:
+            // Flip y-axis only
+            rect = CGRect(
+                x: rect.origin.x,
+                y: 1.0 - rect.origin.y - rect.height,
+                width: rect.width,
+                height: rect.height
+            )
+        default:
+            print("Device orientation is unknown. Bounding box may not be accurate.")
+            break
+        }
+        
+        return rect
+    }
 }

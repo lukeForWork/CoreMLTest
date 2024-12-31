@@ -26,14 +26,18 @@ class ViewController: UIViewController {
         didSet {
             guard
                 let selectedImageIndex = selectedImageIndex,
-                oldValue != selectedImageIndex,
                 selectedImageIndex < pageData.count
             else {
                 imageView.image = nil
                 textDisplay.text = "Error"
                 return
             }
-            didSelectItem(pageData[selectedImageIndex])
+            let item = pageData[selectedImageIndex]
+            updateUI(item)
+            
+            if oldValue != selectedImageIndex && selectedImageIndex != 0 {
+                processVectorData(item)
+            }
         }
     }
     
@@ -152,22 +156,23 @@ class ViewController: UIViewController {
         )
     }
     
-    private func didSelectItem(_ item: DetectionResult) {
+    private func updateUI(_ item: DetectionResult) {
         imageView.image = item.image
-        textDisplay.text = item.identifier + "  " + "\(item.confidence * 100)"
-        
         if selectedImageIndex != 0 {
-            DispatchQueue.global().async {
-                do {
-                    let result = try self.vectorModlel.process(image: item.image)
-                    print(result.description)
-                } catch {
-                    print("failed to process image buffer:", error)
-                }
-            }
             textDisplay.text = item.identifier + "  " + "\(item.confidence * 100)"
         } else {
             textDisplay.text = "Original Image"
+        }
+    }
+    
+    private func processVectorData(_ item: DetectionResult) {
+        DispatchQueue.global().async {
+            do {
+                let result = try self.vectorModlel.process(image: item.image)
+                print(result.description)
+            } catch {
+                print("failed to process image buffer:", error)
+            }
         }
     }
 }
