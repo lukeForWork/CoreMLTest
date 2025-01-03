@@ -98,8 +98,12 @@ class ViewController: UIViewController {
         setupNavigationBar()
     }
     
+    private lazy var sendVectorButton = UIBarButtonItem(barButtonSystemItem: .action, target: self, action: #selector(handleUploadVectorPressed))
+    
     private func setupNavigationBar() {
         navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .camera, target: self, action: #selector(handleCameraButtonPressed))
+        navigationItem.leftBarButtonItem = sendVectorButton
+        sendVectorButton.isHidden = true
     }
     
     private func setupView() {
@@ -168,8 +172,10 @@ class ViewController: UIViewController {
     private func updateUI(_ item: DetectionResult) {
         imageView.image = item.image
         if selectedImageIndex != 0 {
+            sendVectorButton.isHidden = false
             textDisplay.text = item.identifier + "  " + "\(item.confidence * 100)"
         } else {
+            sendVectorButton.isHidden = true
             textDisplay.text = "Original Image"
         }
     }
