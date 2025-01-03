@@ -10,6 +10,7 @@ import CoreML
 
 enum EmbeddingModelError: Error {
     case typeCastingError
+    case noResult
 }
 
 class ObjectVectorModel {

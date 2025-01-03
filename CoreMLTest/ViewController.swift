@@ -34,10 +34,6 @@ class ViewController: UIViewController {
             }
             let item = pageData[selectedImageIndex]
             updateUI(item)
-            
-            if oldValue != selectedImageIndex && selectedImageIndex != 0 {
-                processVectorData(item)
-            }
         }
     }
     
@@ -159,6 +155,88 @@ class ViewController: UIViewController {
         ])
     }
     
+    @objc private func handleUploadVectorPressed(_ sender: UIBarButtonItem) {
+        guard
+            let selectedItemIndex = imagePickerCollectionView.indexPathsForSelectedItems?.first?.item,
+            selectedItemIndex < pageData.count
+        else {
+            return
+        }
+        sender.isEnabled = false
+        let item = pageData[selectedItemIndex]
+        print("start process image in embedding model...")
+        processVectorData(item) { [weak self] result in
+            switch result {
+            case .success(let vector):
+                print("embedding model processing success, sending vector data to server")
+                self?.sendVectors([vector]) { vectorResult in
+                    DispatchQueue.main.async {
+                        sender.isEnabled = true
+                    }
+                    switch vectorResult {
+                    case .success(let successResponse):
+                        print("vector api success with response:", successResponse)
+                    case .failure(let error):
+                        print("vector api failure with error:", error)
+                    }
+                }
+            case .failure(let error):
+                print("embedding model processing failed with error:", error)
+            }
+            
+        }
+    }
+    
+    private func sendVectors(_ vectors: [[Double]], completion: @escaping (Result<String, Error>) -> Void) {
+        guard let url = URL(string: "http://192.168.11.50:5000/search_vec") else {
+            print("Invalid URL")
+            return
+        }
+        
+        let requestBody: [String: Any] = [ "vectors": vectors ]
+        
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody, options: []) else {
+            print("Failed to serialize JSON")
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = jsonData
+        
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            
+            if let error = error {
+                print("Error: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+            
+            guard
+                let httpResponse = response as? HTTPURLResponse,
+                httpResponse.statusCode >= 200 && httpResponse.statusCode < 400
+            else {
+                let error = NSError(domain: "vector url", code: 0, userInfo: ["status code": "error status code"])
+                completion(.failure(error))
+                return
+            }
+            
+            guard
+                let data = data,
+                let responseString = String(data: data, encoding: .utf8)
+            else {
+                let error = NSError(domain: "vector url", code: 0, userInfo: ["response data": "incorrect response data"])
+                completion(.failure(error))
+                return
+            }
+            
+            completion(.success(responseString))
+        }
+        
+        task.resume()
+    }
+    
     @objc private func handleCameraButtonPressed(_ sender: UIButton) {
         impageInputButton.showPickerSelectionActionSheet(
             on: self,
@@ -180,13 +258,22 @@ class ViewController: UIViewController {
         }
     }
     
-    private func processVectorData(_ item: DetectionResult) {
+    private func processVectorData(_ item: DetectionResult, handler: @escaping (Result<[Double], Error>) -> Void) {
         DispatchQueue.global().async {
             do {
                 let result = try self.vectorModlel.process(image: item.image)
-                print(result.description)
+                guard result.count > 0 else {
+                    handler(.failure(EmbeddingModelError.noResult))
+                    return
+                }
+                var doubleArray: [Double] = []
+                for i in 0..<result.count {
+                    doubleArray.append(result[i].doubleValue)
+                }
+                handler(.success(doubleArray))
             } catch {
                 print("failed to process image buffer:", error)
+                handler(.failure(error))
             }
         }
     }
