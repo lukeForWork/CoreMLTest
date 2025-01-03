@@ -105,6 +105,12 @@ class ViewController: UIViewController {
     private func setupView() {
         view.backgroundColor = .white
         
+        let pickImageButton = UIButton(type: .system)
+        pickImageButton.setTitle("Select Image", for: .normal)
+        pickImageButton.translatesAutoresizingMaskIntoConstraints = false
+        pickImageButton.addTarget(self, action: #selector(handleCameraButtonPressed), for: .touchUpInside)
+        view.addSubview(pickImageButton)
+        
         view.addSubview(imageView)
         
         let textContainer = UIView()
@@ -120,6 +126,9 @@ class ViewController: UIViewController {
         view.addSubview(imagePickerContainer)
         
         NSLayoutConstraint.activate([
+            pickImageButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            pickImageButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            
             imagePickerContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             imagePickerContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             imagePickerContainer.bottomAnchor.constraint(equalTo: view.bottomAnchor),
