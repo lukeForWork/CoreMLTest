@@ -83,6 +83,8 @@ class ViewController: UIViewController {
         return cv
     }()
     
+    private let clock = ContinuousClock()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         setupView()
@@ -261,16 +263,20 @@ class ViewController: UIViewController {
     private func processVectorData(_ item: DetectionResult, handler: @escaping (Result<[Double], Error>) -> Void) {
         DispatchQueue.global().async {
             do {
-                let result = try self.vectorModlel.process(image: item.image)
-                guard result.count > 0 else {
-                    handler(.failure(EmbeddingModelError.noResult))
-                    return
+                let elapsed = try self.clock.measure {
+                    let result = try self.vectorModlel.process(image: item.image)
+                    guard result.count > 0 else {
+                        handler(.failure(EmbeddingModelError.noResult))
+                        return
+                    }
+                    var doubleArray: [Double] = []
+                    for i in 0..<result.count {
+                        doubleArray.append(result[i].doubleValue)
+                    }
+                    handler(.success(doubleArray))
+                    print(doubleArray)
                 }
-                var doubleArray: [Double] = []
-                for i in 0..<result.count {
-                    doubleArray.append(result[i].doubleValue)
-                }
-                handler(.success(doubleArray))
+                print("create vector elapsed:", elapsed.description)
             } catch {
                 print("failed to process image buffer:", error)
                 handler(.failure(error))
@@ -292,9 +298,13 @@ extension ViewController: MediaPickerDelegate {
                 pageData.append(DetectionResult(image: image, identifier: "", confidence: 0))
                 selectedImageIndex = 0
 
-                try detector.detectObjects(in: image) { [weak self] detectionResults in
-                    self?.pageData.append(contentsOf: detectionResults)
+                let elapsed = try self.clock.measure {
+                    try detector.detectObjects(in: image) { [weak self] detectionResults in
+                        self?.pageData.append(contentsOf: detectionResults)
+                    }
                 }
+                
+                print("detec object elapsed", elapsed.description)
                 
             } catch {
                 print(error)

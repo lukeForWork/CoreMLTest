@@ -65,7 +65,6 @@ class ObjectDetector {
                             height: data.rect.height * image.size.height
                         )
                         guard let croppedImage = image.crop(to: rect) else { return nil }
-                        print("Normalized Rect: \(data.rect), Pixel Rect: \(rect)")
                         return DetectionResult(image: croppedImage, identifier: data.identifier, confidence: data.confidence)
                     }
                     handler(detectionResult)

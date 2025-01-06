@@ -230,6 +230,7 @@ extension MediaPicker: PHPickerViewControllerDelegate {
                         
                         do {
                             let jpgData = try strongSelf.getDataInRightSize(image: image)
+                            print("size of original image", Double(jpgData.count)/1024.0)
                             let mediaResult = PickedMediaData(id: result.assetIdentifier, data: jpgData)
                             imageDatas[index] = .success(mediaResult)
                         } catch (let err as MediaPickerError) {
@@ -298,11 +299,17 @@ extension MediaPicker: UIImagePickerControllerDelegate, UINavigationControllerDe
             var imageDatas = [PickedMediaResult]()
             do {
                 
+                if let originalImage = info[UIImagePickerController.InfoKey.originalImage] as? UIImage {
+                    let originalSizeInKb = Double(originalImage.heicData()?.count ?? 0)/1024
+                    print(originalSizeInKb)
+                }
+                
                 if
                     let originalImage = info[UIImagePickerController.InfoKey.originalImage] as? UIImage,
                     let normalizedImage = originalImage.normalized(targetSize: self.imageSize)
                 {
                     let imageData = try self.getDataInRightSize(image: normalizedImage)
+                    print("size of original image", Double(imageData.count)/1024.0)
                     let mediaResult = PickedMediaData(id: nil, data: imageData)
                     imageDatas = [.success(mediaResult)]
                 }
