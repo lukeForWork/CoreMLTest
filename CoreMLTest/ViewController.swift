@@ -188,7 +188,7 @@ class ViewController: UIViewController {
     }
     
     private func sendVectors(_ vectors: [[Double]], completion: @escaping (Result<String, Error>) -> Void) {
-        guard let url = URL(string: "http://192.168.11.50:5000/search_vec") else {
+        guard let url = URL(string: "https://vectorsearchshoalter.hk.dev:9453/search_vec") else {
             print("Invalid URL")
             return
         }
