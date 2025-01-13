@@ -80,54 +80,10 @@ class ObjectDetector {
         
         var results = [(rect: CGRect, identifier: String, confidence: VNConfidence)]()
         for prediction in observations {
-            let rect = transform(observedRect: prediction.boundingBox)
-            results.append((rect: rect,
+            results.append((rect: prediction.boundingBox,
                             identifier: prediction.labels[0].identifier,
                             confidence: prediction.labels[0].confidence))
         }
         return results
-    }
-
-    private func transform(observedRect: CGRect) -> CGRect {
-        var rect = observedRect
-        switch UIDevice.current.orientation {
-        case .portraitUpsideDown:
-            // Flip horizontally and vertically
-            rect = CGRect(
-                x: 1.0 - rect.origin.x - rect.width,
-                y: 1.0 - rect.origin.y - rect.height,
-                width: rect.width,
-                height: rect.height
-            )
-        case .landscapeLeft:
-            // Swap x and y, and flip horizontally
-            rect = CGRect(
-                x: rect.origin.y,
-                y: 1.0 - rect.origin.x - rect.width,
-                width: rect.height,
-                height: rect.width
-            )
-        case .landscapeRight:
-            // Swap x and y, and flip vertically
-            rect = CGRect(
-                x: 1.0 - rect.origin.y - rect.height,
-                y: rect.origin.x,
-                width: rect.height,
-                height: rect.width
-            )
-        case .portrait:
-            // Flip y-axis only
-            rect = CGRect(
-                x: rect.origin.x,
-                y: 1.0 - rect.origin.y - rect.height,
-                width: rect.width,
-                height: rect.height
-            )
-        default:
-            print("Device orientation is unknown. Bounding box may not be accurate.")
-            break
-        }
-        
-        return rect
     }
 }
